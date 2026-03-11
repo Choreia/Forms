@@ -13,7 +13,7 @@
 
 - **9種類のテーマ** — ミニマル・ダーク・ラグジュアリー・さくら等、クリックで即切替
 - **カラー・フォント・角丸を自由にカスタマイズ** — Google Formsでは不可能なデザイン自由度
-- **AI生成** — Claude APIキーを設定すれば、自然言語でフォームを一発生成・修正
+- **AI生成** — Googleログインするだけで、自然言語でフォームを一発生成・修正（Gemini連携）
 - **Google Sheets連携** — Googleログインだけで自動セットアップ、IDの手入力不要
 - **リアルタイムプレビュー** — Desktop / Tablet / Mobile での表示を即座に確認
 - **ドラッグ＆ドロップ** — 質問の並び替えが直感的
@@ -42,28 +42,28 @@
          │
          ▼
 ┌──────────────────┐
-│  Claude API      │
-│  (AI生成・任意)   │
+│  Gemini API      │
+│  (AI生成・OAuth)  │
 └──────────────────┘
 ```
 
 - **サーバーレス** — GitHub Pagesで静的ホスティング。バックエンドサーバー不要
 - **データ保存** — ユーザーのGoogle Sheetsに直接保存。サーバーにデータを送信しません
-- **AI生成** — ユーザー自身のClaude APIキーを使用。運営側のコストはゼロ
+- **AI生成** — GoogleログインのOAuthトークンでGemini APIを利用。APIキー不要・運営側のコストはゼロ
 
 ## 使い方
 
 1. [https://choreia.github.io/Forms/](https://choreia.github.io/Forms/) にアクセス
 2. 「Googleでログイン」→ Google Sheetsが自動でセットアップされます
 3. 質問を追加・編集、テーマを選択
-4. （オプション）設定タブでClaude APIキーを入力 → AIに「〇〇向けフォーム」と指示
+4. AIに「〇〇向けフォーム」と指示すればフォームを自動生成（Gemini連携）
 5. 「公開する」→ HTMLをダウンロードしてデプロイ
 
 ## ローカル開発
 
 ```bash
 git clone https://github.com/Choreia/Forms.git
-cd Form/web
+cd Forms/web
 python3 -m http.server 8080
 ```
 
@@ -72,7 +72,7 @@ python3 -m http.server 8080
 ## プロジェクト構成
 
 ```
-Form/
+Forms/
 ├── web/
 │   └── index.html      # フォームビルダー（全機能が1ファイル）
 ├── .github/
@@ -87,7 +87,7 @@ Form/
 | 機能 | 状況 |
 |---|---|
 | テーマ選択・カラーカスタマイズ | 完了 |
-| AI生成（Claude API） | 完了 |
+| AI生成（Gemini） | 完了 |
 | Google Sheets自動連携 | 完了 |
 | リアルタイムプレビュー | 完了 |
 | 回答期限・上限設定 | 完了（UI） |

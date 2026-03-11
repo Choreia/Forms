@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Choreia Forms — Beautiful Form Builder</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src https://www.googleapis.com https://accounts.google.com https://sheets.googleapis.com https://api.anthropic.com; frame-src https://accounts.google.com 'self' blob:; img-src 'self' https://*.googleusercontent.com https://avatars.githubusercontent.com data:; font-src https://fonts.gstatic.com;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src https://www.googleapis.com https://accounts.google.com https://sheets.googleapis.com https://generativelanguage.googleapis.com; frame-src https://accounts.google.com 'self' blob:; img-src 'self' https://*.googleusercontent.com https://avatars.githubusercontent.com data:; font-src https://fonts.gstatic.com;">
 <style>
 /* ========== Reset & Variables — Choreia Brand ========== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -391,7 +391,7 @@ html, body {
       <div class="ai-section">
         <div class="ai-label">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-          AIアシスタント
+          AIアシスタント（Gemini）
         </div>
         <div class="ai-input-wrap">
           <textarea class="ai-input" id="aiInput" rows="1"
@@ -483,10 +483,6 @@ html, body {
           <div><div class="setting-label">reCAPTCHA</div><div class="setting-desc">ボット対策</div></div>
           <label class="toggle"><input type="checkbox" id="recaptchaToggle"><span class="toggle-slider"></span></label>
         </div>
-        <div class="setting-row">
-          <div><div class="setting-label">Claude APIキー</div><div class="setting-desc">AI機能に使用（ローカル保存のみ）</div></div>
-          <input class="setting-input" type="password" id="apiKey" placeholder="sk-ant-..." onchange="saveApiKey()">
-        </div>
       </div>
     </div>
 
@@ -553,7 +549,7 @@ var draggedId = null;
 
 // ========== Google Auth State ==========
 var CLIENT_ID = '267211003481-pck8amdusjfedr9gvvlje4uke53ig4lh.apps.googleusercontent.com';
-var SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
+var SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/generative-language.generativelanguage';
 var tokenClient = null;
 var _token = { value: null };
 function getAccessToken() { return _token.value; }
@@ -665,7 +661,7 @@ var themes = [
 ];
 
 // ========== Init ==========
-function init() { renderThemeGrid(); renderQuestions(); updatePreview(); loadApiKey(); initGoogleAuth(); }
+function init() { renderThemeGrid(); renderQuestions(); updatePreview(); initGoogleAuth(); }
 
 // ========== Tabs ==========
 function switchTab(tab) {
@@ -810,42 +806,70 @@ function updatePreview() {
 // ========== Device Preview ==========
 function setDevice(device) { document.querySelectorAll('.device-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.device === device); }); document.getElementById('previewFrame').className = 'preview-frame ' + (device === 'desktop' ? '' : device); }
 
-// ========== AI Generation ==========
+// ========== AI Generation (Gemini via Google OAuth) ==========
 async function generateWithAI() {
   var input = document.getElementById('aiInput');
   var prompt = input.value.trim();
   if (!prompt) return;
-  var apiKey = localStorage.getItem('sid_forms_api_key');
-  if (!apiKey) { showToast('設定タブでClaude APIキーを入力してください', 'error'); switchTab('settings'); return; }
+
+  if (!accessToken) {
+    showToast('Googleにログインしてください', 'error');
+    return;
+  }
+
   var statusEl = document.getElementById('aiStatus');
   statusEl.innerHTML = '<div class="ai-loading"><div class="spinner"></div>AIがフォームを生成中...</div>';
   document.getElementById('aiBtn').disabled = true;
+
   try {
-    var currentState = JSON.stringify({ title: formState.title, description: formState.description, questions: formState.questions.map(function(q) { return { type: q.type, label: q.label, required: q.required, options: q.options }; }), theme: formState.theme.name });
-    var response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 2048, messages: [{ role: 'user', content: 'あなたはフォームビルダーのアシスタントです。ユーザーの指示に基づいてフォームのJSONを生成・修正してください。\n\n現在のフォーム状態:\n' + currentState + '\n\nユーザーの指示: ' + prompt + '\n\n以下のJSON形式で回答してください。必ず有効なJSONのみを出力（説明文不要）:\n{"title":"フォームタイトル","description":"説明","questions":[{"type":"text|email|tel|textarea|select|radio|checkbox|date|number","label":"質問文","required":true/false,"placeholder":"","options":["選択肢"]}],"theme":"choreia|minimal|dark|warm|nature|luxury|tech|sakura|ocean"}' }] })
+    var currentState = JSON.stringify({
+      title: formState.title, description: formState.description,
+      questions: formState.questions.map(function(q) { return { type: q.type, label: q.label, required: q.required, options: q.options }; }),
+      theme: formState.theme.name
     });
-    if (!response.ok) { var err = {}; try { err = await response.json(); } catch(e) {} throw new Error(err.error ? err.error.message : 'API Error: ' + response.status); }
+
+    var systemPrompt = 'あなたはフォームビルダーのアシスタントです。ユーザーの指示に基づいてフォームのJSONを生成・修正してください。\n\n現在のフォーム状態:\n' + currentState + '\n\nユーザーの指示: ' + prompt + '\n\n以下のJSON形式で回答してください。必ず有効なJSONのみを出力（説明文不要）:\n{"title":"フォームタイトル","description":"説明","questions":[{"type":"text|email|tel|textarea|select|radio|checkbox|date|number","label":"質問文","required":true/false,"placeholder":"","options":["選択肢"]}],"theme":"choreia|minimal|dark|warm|nature|luxury|tech|sakura|ocean"}';
+
+    var response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + accessToken
+      },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: systemPrompt }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 2048, responseMimeType: 'application/json' }
+      })
+    });
+
+    if (!response.ok) {
+      var errBody = '';
+      try { errBody = await response.text(); } catch(e) {}
+      throw new Error('Gemini API エラー (' + response.status + '): ' + errBody.slice(0, 200));
+    }
+
     var data = await response.json();
-    var text = data.content[0].text;
+    var text = data.candidates[0].content.parts[0].text;
     var jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('AIからの応答をパースできませんでした');
     var result = JSON.parse(jsonMatch[0]);
+
     if (result.title) { formState.title = result.title; document.getElementById('formTitle').value = result.title; }
     if (result.description !== undefined) { formState.description = result.description; document.getElementById('formDesc').value = result.description; }
-    if (result.questions) { formState.questions = result.questions.map(function(q) { return { id: 'q' + (nextId++), type: q.type || 'text', label: q.label || '質問', required: q.required || false, placeholder: q.placeholder || '', options: q.options }; }); }
+    if (result.questions) {
+      formState.questions = result.questions.map(function(q) {
+        return { id: 'q' + (nextId++), type: q.type || 'text', label: q.label || '質問', required: q.required || false, placeholder: q.placeholder || '', options: q.options };
+      });
+    }
     if (result.theme) applyTheme(result.theme);
     renderQuestions(); updatePreview(); statusEl.innerHTML = ''; input.value = '';
     showToast('フォームを生成しました', 'success');
-  } catch (err) { statusEl.innerHTML = '<div style="color:var(--danger);font-size:12px;padding:8px;">' + escHtml(err.message) + '</div>'; }
-  finally { document.getElementById('aiBtn').disabled = false; }
+  } catch (err) {
+    statusEl.innerHTML = '<div style="color:var(--danger);font-size:12px;padding:8px;">' + escHtml(err.message) + '</div>';
+  } finally {
+    document.getElementById('aiBtn').disabled = false;
+  }
 }
-
-// ========== API Key ==========
-function saveApiKey() { var key = document.getElementById('apiKey').value; if (key) localStorage.setItem('sid_forms_api_key', key); else localStorage.removeItem('sid_forms_api_key'); }
-function loadApiKey() { var key = localStorage.getItem('sid_forms_api_key'); if (key) document.getElementById('apiKey').value = key; }
 
 // ========== Export ==========
 function exportHTML() { var html = generateFormHTML(true); var blob = new Blob([html], { type: 'text/html' }); var url = URL.createObjectURL(blob); var a = document.createElement('a'); a.href = url; a.download = (formState.title || 'form') + '.html'; a.click(); URL.revokeObjectURL(url); showToast('HTMLファイルをダウンロードしました', 'success'); closePublishModal(); }
