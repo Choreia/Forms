@@ -1,13 +1,13 @@
 # Choreia Forms
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![GitHub Pages](https://img.shields.io/badge/使ってみる-GitHub%20Pages-brightgreen)](https://choreia.github.io/Form/)
+[![GitHub Pages](https://img.shields.io/badge/使ってみる-GitHub%20Pages-brightgreen)](https://choreia.github.io/Forms/)
 
 **Google Formsの美しい代替。完全無料・データは自分のもの。**
 
 テーマを選ぶだけで美しいフォームが作れます。AIに「美容院向けの予約フォーム」と伝えれば一発生成。回答はすべてあなたのGoogle Sheetsに直接保存されるため、サーバーにデータを預ける必要はありません。
 
-**[使ってみる](https://choreia.github.io/Form/)**
+**[使ってみる](https://choreia.github.io/Forms/)**
 
 ## 特徴
 
@@ -53,7 +53,7 @@
 
 ## 使い方
 
-1. [https://choreia.github.io/Form/](https://choreia.github.io/Form/) にアクセス
+1. [https://choreia.github.io/Forms/](https://choreia.github.io/Forms/) にアクセス
 2. 「Googleでログイン」→ Google Sheetsが自動でセットアップされます
 3. 質問を追加・編集、テーマを選択
 4. （オプション）設定タブでClaude APIキーを入力 → AIに「〇〇向けフォーム」と指示
@@ -62,7 +62,7 @@
 ## ローカル開発
 
 ```bash
-git clone https://github.com/Choreia/Form.git
+git clone https://github.com/Choreia/Forms.git
 cd Form/web
 python3 -m http.server 8080
 ```
